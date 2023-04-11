@@ -24,7 +24,7 @@ def read_ukb_field_finder(
     # check if directories are valid, real paths
     if not ukb_project_dir.exists():
         raise FileNotFoundError(f'UK Biobank project directory ({ukb_project_dir}) does not exist.')
-    elif not ukb_project_phenotype_subdir_name.exists():
+    elif not (ukb_project_dir / ukb_project_phenotype_subdir_name).exists():
         raise FileNotFoundError(f'UK Biobank project phenotype sub-directory ({ukb_project_phenotype_subdir_name}) does not exist.')
     else:
         pass
