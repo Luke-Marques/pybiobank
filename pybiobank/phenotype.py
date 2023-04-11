@@ -25,22 +25,19 @@ def read_ukb_field_finder(
     if not ukb_project_dir.exists():
         raise FileNotFoundError(f'UK Biobank project directory ({ukb_project_dir}) does not exist.')
     elif not (ukb_project_dir / ukb_project_phenotype_subdir_name).exists():
-        raise FileNotFoundError(f'UK Biobank project phenotype sub-directory ({ukb_project_phenotype_subdir_name}) does not exist.')
+        raise FileNotFoundError(f'UK Biobank project phenotype sub-directory ({ukb_project_dir / ukb_project_phenotype_subdir_name}) does not exist.')
     else:
         pass
     
     # get field finder files from phenotype sub-directory
-    field_finder_filename_pattern = 'ukb.*field_finder.txt'
-    field_finder_files = sorted(ukb_project_phenotype_subdir_name.glob(field_finder_filename_pattern))
+    field_finder_filename_pattern = 'ukb*field_finder.txt'
+    field_finder_files = sorted((ukb_project_dir / ukb_project_phenotype_subdir_name).glob(field_finder_filename_pattern))
     
     # get basket names (e.g. ukbXXXXX) from field finder files
     baskets = (str(f.stem).split('_')[0] for f in field_finder_files)
     
     # read field finder files to Polars data frames
-    field_finder_dfs = [pl.read_csv(f, separator='\t', has_header=True) for f in field_finder_files]
-    for basket, path, df in zip(baskets, field_finder_files, field_finder_dfs):
-        df['basket'] = basket
-        df['path'] = path.absolute
+    field_finder_dfs = [pl.read_csv(f, sep='\t', has_header=True).with_columns([pl.lit(str(f.stem).split('_')[0]).alias('basket'), pl.lit(str(str(f.absolute()))).alias('path')]) for f in field_finder_files]
     field_finder = pl.concat(field_finder_dfs) \
         .unique() \
         .filter(pl.col('field') != 'eid')
