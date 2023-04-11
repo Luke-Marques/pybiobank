@@ -42,23 +42,6 @@ def read_ukb_field_finder(
     field_finder = pl.concat(field_finder_dfs) \
         .unique() \
         .filter(pl.col('field') != 'eid')
-        
-    # map biobank to polars data types
-    dtype_dict = {
-        'Sequence': pl.Int64,
-        'Integer': pl.Int64,
-        'Categorical (single)': pl.Categorical,
-        'Categorical (multiple)': pl.Categorical,
-        'Continuous': pl.Float64,
-        'Text': pl.Object,
-        'Date': pl.Date,
-        'Time': pl.Time,
-        'Compound': pl.Object,
-        'Binary object': pl.Binary,
-        'Records': pl.Object,
-        'Curve': pl.Object
-    }
-    field_finder = field_finder.with_columns(field_finder['ukb_type'].apply(lambda x: dtype_dict.get(x, pl.Unknown)).alias('polars_type'))
     
     return field_finder
 
@@ -102,13 +85,30 @@ def read_ukb_phenotype_fields(
     else:
         pass  # TO-DO: add in messy filtering of ukb_fields
     
+    # create dictionary to map UKB to Polars dtypes
+    dtype_dict = {
+        'Sequence': pl.Int64,
+        'Integer': pl.Int64,
+        'Categorical (single)': pl.Categorical,
+        'Categorical (multiple)': pl.Categorical,
+        'Continuous': pl.Float64,
+        'Text': pl.Utf8,
+        'Date': pl.Date,
+        'Time': pl.Time,
+        'Compound': pl.Utf8,
+        'Binary object': pl.Binary,
+        'Records': pl.Utf8,
+        'Curve': pl.Utf8
+    }
+    
     # loop over baskets in filtered field_finder and read required fields from phenotype .csv file
     baskets = field_finder['basket'].unique().to_list()
     pheno_dfs = []
     for basket in baskets:
         fields = ['eid'] + field_finder.filter(pl.col('basket') == basket)['field'].unique().to_list()
+        dtypes = [pl.Int64] + list(map(lambda x: dtype_dict.get(x, pl.Unknown), field_finder.filter(pl.col('basket') == basket)['ukb_type'].to_list()))
         pheno_file = ukb_project_dir / ukb_project_phenotype_subdir_name / Path(f'{basket}.csv')
-        pheno_dfs.append(pl.read_csv(pheno_file, columns=fields, has_header=True, infer_schema_length=1000))
+        pheno_dfs.append(pl.read_csv(pheno_file, columns=fields, has_header=True, dtypes=dtypes))
     pheno = reduce(lambda left_df, right_df: left_df.join(other=right_df, on='eid', how='outer'), pheno_dfs)
     
     return pheno
