@@ -3,6 +3,7 @@ from pathlib import Path, PosixPath, WindowsPath
 from typing import List
 from functools import reduce
 
+
 def read_ukb_field_finder(
     ukb_project_dir: str or Path or PosixPath or WindowsPath,
     ukb_project_phenotype_subdir_name: str or Path or PosixPath or WindowsPath = Path('phenotypes')
@@ -41,6 +42,23 @@ def read_ukb_field_finder(
     field_finder = pl.concat(field_finder_dfs) \
         .unique() \
         .filter(pl.col('field') != 'eid')
+        
+    # map biobank to polars data types
+    dtype_dict = {
+        'Sequence': pl.Int64,
+        'Integer': pl.Int64,
+        'Categorical (single)': pl.Categorical,
+        'Categorical (multiple)': pl.Categorical,
+        'Continuous': pl.Float64,
+        'Text': pl.Object,
+        'Date': pl.Date,
+        'Time': pl.Time,
+        'Compound': pl.Object,
+        'Binary object': pl.Binary,
+        'Records': pl.Object,
+        'Curve': pl.Object
+    }
+    field_finder = field_finder.with_columns(field_finder['ukb_type'].apply(lambda x: dtype_dict.get(x, pl.Unknown)).alias('polars_type'))
     
     return field_finder
 
