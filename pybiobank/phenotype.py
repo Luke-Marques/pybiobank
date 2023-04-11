@@ -90,7 +90,7 @@ def read_ukb_phenotype_fields(
     for basket in baskets:
         fields = field_finder.filter(pl.col('basket') == basket)['basket'].unique().to_list().append('eid')
         pheno_file = ukb_project_dir / ukb_project_phenotype_subdir_name / Path(f'{basket}.csv')
-        pheno_dfs.append(pl.read_csv(pheno_file, columns=fields))
+        pheno_dfs.append(pl.read_csv(pheno_file, columns=fields, has_header=True, infer_schema_length=1000))
     pheno = reduce(lambda left_df, right_df: left_df.join(other=right_df, on='eid', how='outer'), pheno_dfs)
     
     return pheno
