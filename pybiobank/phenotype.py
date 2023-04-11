@@ -69,7 +69,7 @@ def read_ukb_phenotype_fields(
     # check if directories are valid, real paths
     if not ukb_project_dir.exists():
         raise FileNotFoundError(f'UK Biobank project directory ({ukb_project_dir}) does not exist.')
-    elif not ukb_project_phenotype_subdir_name.exists():
+    elif not (ukb_project_dir / ukb_project_phenotype_subdir_name).exists():
         raise FileNotFoundError(f'UK Biobank project phenotype sub-directory ({ukb_project_phenotype_subdir_name}) does not exist.')
     else:
         pass
@@ -85,14 +85,12 @@ def read_ukb_phenotype_fields(
         pass  # TO-DO: add in messy filtering of ukb_fields
     
     # loop over baskets in filtered field_finder and read required fields from phenotype .csv file
-    baskets = field_finder.select(pl.col('basket').arr.unique())
+    baskets = field_finder['basket'].unique().to_list()
     pheno_dfs = []
     for basket in baskets:
-        fields = field_finder.filter(pl.col('basket') == basket).select(pl.col('field').arr.unique()) + 'eid'
-        pheno_file = ukb_project_phenotype_subdir_name / Path(f'{basket}.csv')
-        pheno_dfs.append(
-            pl.read_csv(pheno_file, columns=fields)
-        )
+        fields = field_finder.filter(pl.col('basket') == basket)['basket'].unique().to_list().append('eid')
+        pheno_file = ukb_project_dir / ukb_project_phenotype_subdir_name / Path(f'{basket}.csv')
+        pheno_dfs.append(pl.read_csv(pheno_file, columns=fields))
     pheno = reduce(lambda left_df, right_df: left_df.join(other=right_df, on='eid', how='outer'), pheno_dfs)
     
     return pheno
