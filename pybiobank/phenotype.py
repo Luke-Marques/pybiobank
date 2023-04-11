@@ -99,6 +99,3 @@ def read_ukb_phenotype_fields(
     pheno = reduce(lambda left_df, right_df: left_df.join(other=right_df, on='eid', how='outer'), pheno_dfs)
     
     return pheno
-    
-
-   
