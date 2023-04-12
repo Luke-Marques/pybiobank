@@ -38,7 +38,7 @@ def read_ukb_field_finder(
     baskets = (str(f.stem).split('_')[0] for f in field_finder_files)
     
     # read field finder files to Polars data frames
-    field_finder_dfs = [pl.read_csv(f, sep='\t', has_header=True).with_columns([pl.lit(str(f.stem).split('_')[0]).alias('basket'), pl.lit(str(str(f.absolute()))).alias('path')]) for f in field_finder_files]
+    field_finder_dfs = [pl.read_csv(f, separator='\t', has_header=True).with_columns([pl.lit(str(f.stem).split('_')[0]).alias('basket'), pl.lit(str(str(f.absolute()))).alias('path')]) for f in field_finder_files]
     field_finder = pl.concat(field_finder_dfs) \
         .unique() \
         .unique(subset='field') \
