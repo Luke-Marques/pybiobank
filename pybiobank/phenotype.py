@@ -5,8 +5,8 @@ from functools import reduce
 
 
 def read_ukb_field_finder(
-    ukb_project_dir: str or Path or PosixPath or WindowsPath,
-    ukb_project_phenotype_subdir_name: str or Path or PosixPath or WindowsPath = Path('phenotypes')
+    ukb_project_dir: str | Path | PosixPath | WindowsPath,
+    ukb_project_phenotype_subdir_name: str | Path | PosixPath | WindowsPath = Path('phenotypes')
 ) -> pl.DataFrame:
     """_summary_
 
@@ -38,7 +38,12 @@ def read_ukb_field_finder(
     baskets = (str(f.stem).split('_')[0] for f in field_finder_files)
     
     # read field finder files to Polars data frames
-    field_finder_dfs = [pl.read_csv(f, separator='\t', has_header=True).with_columns([pl.lit(str(f.stem).split('_')[0]).alias('basket'), pl.lit(str(str(f.absolute()))).alias('path')]) for f in field_finder_files]
+    field_finder_dfs = [
+        pl.read_csv(f, separator='\t', has_header=True).with_columns([
+            pl.lit(str(f.stem).split('_')[0]).alias('basket'), 
+            pl.lit(str(str(f.absolute()))).alias('path')
+        ]) for f in field_finder_files
+    ]
     field_finder = pl.concat(field_finder_dfs) \
         .unique() \
         .unique(subset='field') \
@@ -48,9 +53,9 @@ def read_ukb_field_finder(
 
 
 def read_ukb_phenotype_fields(
-    ukb_project_dir: str or Path or PosixPath or WindowsPath,
+    ukb_project_dir: str | Path | PosixPath | WindowsPath,
     ukb_fields: List[str],
-    ukb_project_phenotype_subdir_name: str or Path or PosixPath or WindowsPath = Path('phenotypes')
+    ukb_project_phenotype_subdir_name: str | Path | PosixPath | WindowsPath = Path('phenotypes')
 ) -> pl.DataFrame:
     """_summary_
 
@@ -86,8 +91,8 @@ def read_ukb_phenotype_fields(
     dtype_dict = {
         'Sequence': pl.Int64,
         'Integer': pl.Int64,
-        'Categorical (single)': pl.Categorical,
-        'Categorical (multiple)': pl.Categorical,
+        'Categorical (single)': pl.Int64,
+        'Categorical (multiple)': pl.Utf8,
         'Continuous': pl.Float64,
         'Text': pl.Utf8,
         'Date': pl.Date,
