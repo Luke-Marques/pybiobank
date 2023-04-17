@@ -42,7 +42,6 @@ def read_ukb_field_finder(
     ]
     field_finder = pl.concat(field_finder_dfs) \
         .unique() \
-        .unique(subset='field') \
         .filter(pl.col('field') != 'eid')
     
     return field_finder
@@ -88,6 +87,9 @@ def read_ukb_phenotype_fields(
     ) \
         .filter(pl.col('field').is_in(ukb_fields))
     
+    # get duplicated field columns
+    dup_fields = field_finder.filter(pl.col('field').is_duplicated())['field'].unique().to_list()
+    
     # create dictionary to map UKB dtypes to Polars dtypes
     dtype_dict = {
         'Sequence': pl.Int64,
@@ -111,7 +113,9 @@ def read_ukb_phenotype_fields(
         fields = ['eid'] + field_finder.filter(pl.col('basket') == basket)['field'].to_list()
         dtypes = [pl.Int64] + list(map(lambda x: dtype_dict.get(x, pl.Unknown), field_finder.filter(pl.col('basket') == basket)['ukb_type'].to_list()))
         pheno_file = ukb_project_dir / ukb_project_phenotype_subdir_name / Path(f'{basket}.csv')
-        pheno_dfs.append(pl.read_csv(pheno_file, columns=fields, has_header=True, dtypes=dtypes))
+        pheno_df = pl.read_csv(pheno_file, columns=fields, has_header=True, dtypes=dtypes)
+        pheno_df.select(pl.all().map_alias(lambda col_name: f'{col_name}_{basket}' if (col_name in dup_fields) else col_name))  # add suffix to duplicated field columns
+        pheno_dfs.append(pheno_df)
     pheno = reduce(lambda left_df, right_df: left_df.join(other=right_df, on='eid', how='outer'), pheno_dfs)
 
     return pheno
