@@ -1,1 +1,2 @@
-from .phenotype import read_ukb_field_finder, read_ukb_phenotype_fields
+from .phenotype import *
+from .genotype import *
