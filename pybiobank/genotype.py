@@ -93,6 +93,22 @@ def read_sample_quality_control_file(ukb_project_dir: Path) -> pl.DataFrame:
     return sample_qc
     
 
+def read_relatedness_file(ukb_project_dir: Path) -> pl.DataFrame:
+    """_summary_
 
+    Args:
+        ukb_project_dir (Path): _description_
+
+    Returns:
+        pl.DataFrame: _description_
+    """
+    
+    imputed_subdir = ukb_project_dir / 'imputed'
+    
+    # read relatedness files to single dataframe
+    relatedness_files = imputed_subdir.glob('*rel*.dat')
+    rel = pl.concat((pl.read_csv(f)) for f in relatedness_files)
+    
+    return rel
     
     
