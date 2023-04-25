@@ -1,6 +1,7 @@
 import polars as pl
 from pathlib import Path
 from itertools import chain
+import os
 
 
 def read_fam_file(ukb_project_dir: Path) -> pl.DataFrame:
@@ -15,12 +16,13 @@ def read_fam_file(ukb_project_dir: Path) -> pl.DataFrame:
     
     genotyped_subdir = ukb_project_dir / 'genotyped'
     fam_files = genotyped_subdir.glob('*.fam')
-    most_recently_modified_fam_file = max([f.stat().st_mtime for f in fam_files])
+    most_recently_modified_fam_file = max(fam_files, key=os.path.getmtime)
     fam_cols = ['fid', 'iid', 'pid', 'mid', 'sex', 'batch']
     fam = pl.read_csv(
         most_recently_modified_fam_file,
         has_header=False,
-        new_columns=fam_cols
+        new_columns=fam_cols,
+        separator=' '
     )
     
     return fam
@@ -39,7 +41,7 @@ def read_sample_quality_control_file(ukb_project_dir: Path) -> pl.DataFrame:
     imputed_subdir = ukb_project_dir / 'imputed'
     
     # read in sample quality control file
-    sample_qc_cols = [col.lower() for col in chain(*[
+    sample_qc_cols = [
         "affymetrix_1", 
         "affymetrix_2", 
         "genotyping_array", 
@@ -64,17 +66,19 @@ def read_sample_quality_control_file(ukb_project_dir: Path) -> pl.DataFrame:
         "excluded_from_kinship_inference",
         "excess_relatives", 
         "in_white_British_ancestry_subset",
-        "used_in_pca_calculation",
-        [f'pc{i+1}' for i in range(40)],
+        "used_in_pca_calculation"
+    ] + [f'pc{i+1}' for i in range(40)] + [
         "in_Phasing_Input_chr1_22", 
         "in_Phasing_Input_chrX",
         "in_Phasing_Input_chrXY"
-    ])]
+    ]
+    sample_qc_cols = [col.lower() for col in sample_qc_cols]
     sample_qc_file = imputed_subdir / 'ukb_sqc_v2.txt'
     sample_qc = pl.read_csv(
         sample_qc_file,
         has_header=False,
-        new_columns=sample_qc_cols
+        new_columns=sample_qc_cols,
+        separator=' '
     )
     
     # read fid values from fam file to list
@@ -86,8 +90,10 @@ def read_sample_quality_control_file(ukb_project_dir: Path) -> pl.DataFrame:
         raise AssertionError(error_msg)
     
     # add eid column (fid values from fam file) to sample quality control dataframe
-    sample_qc['eid'] = fam_fids
-    sample_qc_reordered_cols = ['eid'] + [col for col in sample_qc.columns.difference('eid')]
+    sample_qc = sample_qc.with_columns(
+        pl.Series(fam_fids).alias('eid')
+    )
+    sample_qc_reordered_cols = ['eid'] + [col for col in sample_qc.columns if col != 'eid']
     sample_qc = sample_qc[sample_qc_reordered_cols]
     
     return sample_qc
